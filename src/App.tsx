@@ -8,8 +8,8 @@ import { LoginScreen } from './screens/LoginScreen';
 import { useAuth } from './lib/auth';
 import {
   loadEntries,
-  saveEntries,
   addEntry as addEntryStore,
+  deleteEntry,
   clearEntries,
   seedIfEmpty,
   type Entry,
@@ -57,9 +57,25 @@ export default function App() {
   const [entries, setEntries] = useState<Entry[]>([]);
 
   useEffect(() => {
-    if (!session) return;
-    seedIfEmpty();
-    setEntries(loadEntries() || []);
+    if (!session) {
+      setEntries([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        await seedIfEmpty();
+        if (cancelled) return;
+        const fresh = await loadEntries();
+        if (cancelled) return;
+        setEntries(fresh);
+      } catch (e) {
+        console.error('No se pudieron cargar los registros:', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [session]);
 
   if (loading) {
@@ -78,24 +94,23 @@ export default function App() {
     );
   }
 
-  const onAdd = (e: Entry) => {
-    const next = addEntryStore(e);
+  const onAdd = async (e: Entry) => {
+    const next = await addEntryStore(e);
     setEntries(next);
   };
-  const onDelete = (id: string) => {
-    const next = (loadEntries() || []).filter((e) => e.id !== id);
-    saveEntries(next);
-    setEntries(next);
+  const onDelete = async (id: string) => {
+    await deleteEntry(id);
+    setEntries((cur) => cur.filter((e) => e.id !== id));
   };
-  const onClear = () => {
+  const onClear = async () => {
     if (!confirm('¿Borrar todas las entradas? Esto no se puede deshacer.')) return;
-    clearEntries();
+    await clearEntries();
     setEntries([]);
   };
-  const onSeed = () => {
-    clearEntries();
-    seedIfEmpty();
-    setEntries(loadEntries() || []);
+  const onSeed = async () => {
+    await clearEntries();
+    const next = await seedIfEmpty();
+    setEntries(next);
   };
 
   const lastEntry = entries.length ? entries[entries.length - 1] : null;

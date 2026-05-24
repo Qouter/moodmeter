@@ -1,6 +1,8 @@
-// Data layer: mood entries, mood labels, mock seed data, mock services.
+// Data layer: mood entries, mood labels, seed data, Supabase persistence.
 // Coordinates: x (pleasantness) 0..9, y (energy) 0..9, both 0-indexed from bottom-left.
 // Displayed scale -5..+5 (label at boundaries). Center value of cell = (x-4.5, y-4.5).
+
+import { supabase } from './supabase';
 
 export type Quadrant =
   | 'high-unpleasant'
@@ -23,8 +25,6 @@ export interface CalendarEvent {
   hour: number;
   durMin: number;
 }
-
-const STORAGE_KEY = 'mood_meter_entries_v1';
 
 // 10x10 labels — classic mood meter vocabulary, in Spanish. (x left→right, y bottom→top)
 // Index: MOOD_LABELS[9 - y][x] for y from 0 (bottom) to 9 (top).
@@ -102,36 +102,74 @@ export function displayCoord(x: number, y: number) {
   };
 }
 
-export function loadEntries(): Entry[] | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as Entry[];
-  } catch {
-    return null;
-  }
-}
-export function saveEntries(arr: Entry[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
-  } catch {
-    /* ignore */
-  }
-}
-export function addEntry(entry: Entry): Entry[] {
-  const cur = loadEntries() || [];
-  const next = [...cur, entry].sort((a, b) => new Date(a.t).getTime() - new Date(b.t).getTime());
-  saveEntries(next);
-  return next;
-}
-export function clearEntries(): void {
-  localStorage.removeItem(STORAGE_KEY);
+export interface UserSettings {
+  name: string;
+  mode: 'random' | 'fixed' | 'manual';
+  pings_per_day: number;
+  window_start: number;
+  window_end: number;
+  weekend_mode: 'same' | 'reduced' | 'off';
+  night_silence: boolean;
+  contextual: { wakeup: boolean; postEvent: boolean; inactivity: boolean };
+  telegram_on: boolean;
+  calendar_on: boolean;
+  telegram_chat_id: string | null;
 }
 
-export function seedIfEmpty(): void {
-  if (loadEntries()) return;
+async function currentUserId(): Promise<string> {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) throw new Error('No hay sesión activa');
+  return data.user.id;
+}
+
+export async function loadEntries(): Promise<Entry[]> {
+  const { data, error } = await supabase
+    .from('mood_entries')
+    .select('id,t,x,y,word,label')
+    .order('t', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((r) => ({
+    id: r.id as string,
+    t: r.t as string,
+    x: r.x as number,
+    y: r.y as number,
+    word: (r.word as string | null) ?? '',
+    label: (r.label as string | null) ?? '',
+  }));
+}
+
+export async function addEntry(entry: Entry): Promise<Entry[]> {
+  const user_id = await currentUserId();
+  const { error } = await supabase.from('mood_entries').insert({
+    user_id,
+    t: entry.t,
+    x: entry.x,
+    y: entry.y,
+    word: entry.word,
+    label: entry.label,
+  });
+  if (error) throw error;
+  return loadEntries();
+}
+
+export async function deleteEntry(id: string): Promise<void> {
+  const { error } = await supabase.from('mood_entries').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function clearEntries(): Promise<void> {
+  const user_id = await currentUserId();
+  const { error } = await supabase.from('mood_entries').delete().eq('user_id', user_id);
+  if (error) throw error;
+}
+
+export async function seedIfEmpty(): Promise<Entry[]> {
+  const existing = await loadEntries();
+  if (existing.length > 0) return existing;
+
+  const user_id = await currentUserId();
   const now = new Date();
-  const entries: Entry[] = [];
+  const rows: Array<{ user_id: string; t: string; x: number; y: number; word: string; label: string }> = [];
   const wordsByQuad: Record<Quadrant, string[]> = {
     'high-unpleasant': ['agobio', 'prisa', 'tensión', 'frustración', 'enfado', 'ansiedad'],
     'high-pleasant': ['flow', 'foco', 'energía', 'chispa', 'motivado', 'optimismo', 'impulso'],
@@ -159,8 +197,8 @@ export function seedIfEmpty(): void {
       const q = quadrant(x, y);
       const words = wordsByQuad[q];
       const word = words[Math.floor(Math.random() * words.length)];
-      entries.push({
-        id: Math.random().toString(36).slice(2, 10),
+      rows.push({
+        user_id,
         t: t.toISOString(),
         x,
         y,
@@ -169,7 +207,55 @@ export function seedIfEmpty(): void {
       });
     }
   }
-  saveEntries(entries);
+
+  const { error } = await supabase.from('mood_entries').insert(rows);
+  if (error) throw error;
+  return loadEntries();
+}
+
+const DEFAULT_SETTINGS: UserSettings = {
+  name: '',
+  mode: 'random',
+  pings_per_day: 4,
+  window_start: 9,
+  window_end: 22,
+  weekend_mode: 'reduced',
+  night_silence: true,
+  contextual: { wakeup: true, postEvent: true, inactivity: false },
+  telegram_on: false,
+  calendar_on: false,
+  telegram_chat_id: null,
+};
+
+export async function loadSettings(): Promise<UserSettings> {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('name,mode,pings_per_day,window_start,window_end,weekend_mode,night_silence,contextual,telegram_on,calendar_on,telegram_chat_id')
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return DEFAULT_SETTINGS;
+  return {
+    name: (data.name as string) ?? '',
+    mode: (data.mode as UserSettings['mode']) ?? 'random',
+    pings_per_day: (data.pings_per_day as number) ?? 4,
+    window_start: (data.window_start as number) ?? 9,
+    window_end: (data.window_end as number) ?? 22,
+    weekend_mode: (data.weekend_mode as UserSettings['weekend_mode']) ?? 'reduced',
+    night_silence: (data.night_silence as boolean) ?? true,
+    contextual: (data.contextual as UserSettings['contextual']) ?? DEFAULT_SETTINGS.contextual,
+    telegram_on: (data.telegram_on as boolean) ?? false,
+    calendar_on: (data.calendar_on as boolean) ?? false,
+    telegram_chat_id: (data.telegram_chat_id as string | null) ?? null,
+  };
+}
+
+export async function saveSettings(partial: Partial<UserSettings>): Promise<void> {
+  const user_id = await currentUserId();
+  const { error } = await supabase
+    .from('user_settings')
+    .update({ ...partial, updated_at: new Date().toISOString() })
+    .eq('user_id', user_id);
+  if (error) throw error;
 }
 
 export const MOCK_CALENDAR: CalendarEvent[] = [

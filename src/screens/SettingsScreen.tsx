@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { NeuCard, NeuButton } from '../components/primitives';
 import { Icon } from '../components/icons';
 import {
@@ -13,14 +13,15 @@ import {
 } from '../components/settings/controls';
 import { SchedulePreview } from '../components/settings/SchedulePreview';
 import { computeSchedule } from '../lib/format';
+import { loadSettings, saveSettings, type UserSettings } from '../lib/data';
 
 interface SettingsScreenProps {
   onClear: () => void;
   onSeed: () => void;
 }
 
-type Mode = 'random' | 'fixed' | 'manual';
-type WeekendMode = 'same' | 'reduced' | 'off';
+type Mode = UserSettings['mode'];
+type WeekendMode = UserSettings['weekend_mode'];
 
 function hToStr(h: number) {
   const hh = Math.floor(h);
@@ -29,17 +30,38 @@ function hToStr(h: number) {
 }
 
 export function SettingsScreen({ onClear, onSeed }: SettingsScreenProps) {
-  const [telegramOn, setTelegramOn] = useState(true);
-  const [calendarOn, setCalendarOn] = useState(true);
-  const [name, setName] = useState('Diego');
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingPatch = useRef<Partial<UserSettings>>({});
 
-  const [mode, setMode] = useState<Mode>('random');
-  const [pingsPerDay, setPingsPerDay] = useState(4);
-  const [windowStart, setWindowStart] = useState(9);
-  const [windowEnd, setWindowEnd] = useState(22);
-  const [weekendMode, setWeekendMode] = useState<WeekendMode>('reduced');
-  const [nightSilence, setNightSilence] = useState(true);
-  const [contextual, setContextual] = useState({ wakeup: true, postEvent: true, inactivity: false });
+  useEffect(() => {
+    let cancelled = false;
+    loadSettings()
+      .then((s) => {
+        if (!cancelled) setSettings(s);
+      })
+      .catch((e) => console.error('No se pudieron cargar los ajustes:', e));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const update = (patch: Partial<UserSettings>) => {
+    setSettings((s) => (s ? { ...s, ...patch } : s));
+    pendingPatch.current = { ...pendingPatch.current, ...patch };
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const toSave = pendingPatch.current;
+      pendingPatch.current = {};
+      saveSettings(toSave).catch((e) => console.error('No se pudieron guardar los ajustes:', e));
+    }, 400);
+  };
+
+  const mode: Mode = settings?.mode ?? 'random';
+  const pingsPerDay = settings?.pings_per_day ?? 4;
+  const windowStart = settings?.window_start ?? 9;
+  const windowEnd = settings?.window_end ?? 22;
+  const weekendMode: WeekendMode = settings?.weekend_mode ?? 'reduced';
 
   const today = new Date();
   const isWeekend = today.getDay() === 0 || today.getDay() === 6;
@@ -58,6 +80,33 @@ export function SettingsScreen({ onClear, onSeed }: SettingsScreenProps) {
 
   const nowH = today.getHours() + today.getMinutes() / 60;
   const nextIdx = schedule.findIndex((h) => h > nowH);
+
+  if (!settings) {
+    return (
+      <div style={{ display: 'grid', placeItems: 'center', minHeight: '40vh', color: 'var(--ink-mute)', fontSize: 14 }}>
+        Cargando ajustes…
+      </div>
+    );
+  }
+
+  const {
+    name,
+    night_silence: nightSilence,
+    contextual,
+    telegram_on: telegramOn,
+    calendar_on: calendarOn,
+  } = settings;
+
+  const setName = (v: string) => update({ name: v });
+  const setTelegramOn = (v: boolean) => update({ telegram_on: v });
+  const setCalendarOn = (v: boolean) => update({ calendar_on: v });
+  const setMode = (v: Mode) => update({ mode: v });
+  const setPingsPerDay = (v: number) => update({ pings_per_day: v });
+  const setWindowStart = (v: number) => update({ window_start: v });
+  const setWindowEnd = (v: number) => update({ window_end: v });
+  const setWeekendMode = (v: WeekendMode) => update({ weekend_mode: v });
+  const setNightSilence = (v: boolean) => update({ night_silence: v });
+  const setContextual = (v: UserSettings['contextual']) => update({ contextual: v });
 
   return (
     <div style={{ display: 'grid', gap: 20 }}>
