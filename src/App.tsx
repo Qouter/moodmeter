@@ -4,6 +4,8 @@ import { CheckInScreen } from './screens/CheckInScreen';
 import { InsightsScreen } from './screens/InsightsScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { LoginScreen } from './screens/LoginScreen';
+import { useAuth } from './lib/auth';
 import {
   loadEntries,
   saveEntries,
@@ -50,13 +52,31 @@ function Logo() {
 }
 
 export default function App() {
+  const { session, loading, signOut } = useAuth();
   const [tab, setTab] = useState<Tab>('checkin');
   const [entries, setEntries] = useState<Entry[]>([]);
 
   useEffect(() => {
+    if (!session) return;
     seedIfEmpty();
     setEntries(loadEntries() || []);
-  }, []);
+  }, [session]);
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '80vh', display: 'grid', placeItems: 'center', color: 'var(--ink-mute)', fontSize: 14 }}>
+        Cargando…
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="app">
+        <LoginScreen />
+      </div>
+    );
+  }
 
   const onAdd = (e: Entry) => {
     const next = addEntryStore(e);
@@ -109,6 +129,26 @@ export default function App() {
             </button>
           ))}
         </nav>
+
+        <button
+          onClick={() => signOut()}
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+          style={{
+            background: 'var(--bg)',
+            border: 'none',
+            boxShadow: 'var(--neu-out-sm)',
+            borderRadius: 12,
+            width: 40,
+            height: 40,
+            display: 'grid',
+            placeItems: 'center',
+            cursor: 'pointer',
+            color: 'var(--ink-mute)',
+          }}
+        >
+          <Icon.LogOut />
+        </button>
       </header>
 
       <main>
