@@ -2,6 +2,42 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Current state — read this first on every new session
+
+**Keep this section up to date as work progresses.** It is the orientation point for resumed sessions. If you finish a step or hit a new blocker, edit this section in the same commit.
+
+### Done
+
+- Vite + React + TS scaffold; pixel-perfect port of the Claude Design prototype.
+- All 4 screens fully implemented and visually verified in the browser: Registro, Insights, Historial, Ajustes.
+- Neumorphic styling, all charts, frequency-config UI in Ajustes (modo, pings/día, ventana, fin de semana, silencio nocturno, modo contextual, vista previa).
+- Mock storage via `localStorage` with 21-day auto-seed in `src/lib/data.ts`.
+- Repo published at https://github.com/Qouter/moodmeter (branch `main`).
+- README.md, CLAUDE.md, .gitignore (covers `.env*`, build artifacts, design tarball).
+- Supabase project created by the user. **project_ref**: `wgvklmfizztewfkvjmsg`. DB password lives in `.env.local` as `SUPABASE_DB_PASSWORD` (gitignored).
+- Supabase MCP server registered in `.mcp.json` (project scope).
+
+### Pending — user actions
+
+1. **Authenticate Supabase MCP**: run `claude /mcp` in a separate terminal, pick `supabase`, complete OAuth. Then restart the Claude Code session so the MCP tools load.
+2. **Decide auth method**: Google OAuth (recommended — same flow reused later for Google Calendar) vs Magic Link by email. **Not yet confirmed.**
+3. **Provide** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from Supabase **Settings → API**, to fill into `.env.local`.
+
+### Pending — implementation, in order
+
+1. **Supabase schema**: `mood_entries(id uuid, user_id uuid, t timestamptz, x int, y int, word text, label text)` + `user_settings(user_id uuid, mode, pings_per_day, window_start, window_end, weekend_mode, night_silence, contextual jsonb, telegram_chat_id text, ...)`. RLS policy `user_id = auth.uid()` on both tables.
+2. **Supabase client + auth UI**: install `@supabase/supabase-js`, create `src/lib/supabase.ts`, build a minimal login screen, gate the app behind a session.
+3. **Swap `localStorage` for Supabase** in `src/lib/data.ts`. Keep the same exported API (`loadEntries`, `saveEntries`, `addEntry`, `clearEntries`, `seedIfEmpty`) so screens don't change. Make calls async — the entries state in `App.tsx` will need to await.
+4. **Deploy to Vercel**: connect the GitHub repo, set `VITE_SUPABASE_*` env vars. Capture the deployed URL — needed for Telegram + Google callbacks.
+5. **Telegram bot**: create bot via @BotFather, store token in Supabase Vault. Edge Function `telegram-webhook` for `/mood`, `/pause`, `/skip`, `/settings`. `pg_cron` job (every minute or every 15 min) reads `user_settings`, computes next ping with the same `computeSchedule` logic from `src/lib/format.ts`, and posts to Telegram. Link the user account to `telegram_chat_id` via a one-time `/start MM-XXXX` token.
+6. **Google Calendar**: extend the Supabase Google OAuth provider with scope `https://www.googleapis.com/auth/calendar.events.readonly`. Edge Function `gcal-events` reads day events via the user's stored access token, returns to the Insights screen to replace `MOCK_CALENDAR`.
+
+### Open design questions to resolve before coding the relevant step
+
+- **Calendar correlation source-of-truth**: keep events in memory on the client, or cache a daily snapshot per user in a `calendar_events_cache` table? (Step 6.)
+- **`mood_entries.label`**: store it (denormalized but resilient if `MOOD_LABELS` changes) or derive on read? Current code stores it.
+- **Multi-device**: this is single-user, but a single user can be on phone + desktop. Realtime subscription to `mood_entries` is a nice-to-have, not a blocker.
+
 ## Commands
 
 ```bash
