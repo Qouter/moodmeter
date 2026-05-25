@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react';
-import { NeuCard, Stat } from '../components/primitives';
+import { useEffect, useMemo, useState } from 'react';
+import { NeuCard, NeuButton, Stat } from '../components/primitives';
 import { MoodGrid } from '../components/MoodGrid';
 import { LineChart } from '../components/charts/LineChart';
 import { QuadrantDonut } from '../components/charts/QuadrantDonut';
 import { HourDowHeat } from '../components/charts/HourDowHeat';
 import { TopWords } from '../components/charts/TopWords';
 import { CalendarCorrelation } from '../components/charts/CalendarCorrelation';
-import { quadrant, type Entry, type Quadrant } from '../lib/data';
+import { quadrant, type CalendarEvent, type Entry, type Quadrant } from '../lib/data';
+import { fetchCalendarEventsForDay, CalendarAuthError } from '../lib/calendar';
+import { useAuth } from '../lib/auth';
 
 interface InsightsScreenProps {
   entries: Entry[];
@@ -16,6 +18,33 @@ type Range = '7' | '14' | '30';
 
 export function InsightsScreen({ entries }: InsightsScreenProps) {
   const [range, setRange] = useState<Range>('7');
+  const { signInWithGoogle } = useAuth();
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[] | null>(null);
+  const [calendarState, setCalendarState] = useState<'loading' | 'ready' | 'needs-auth' | 'error'>('loading');
+  const [calendarError, setCalendarError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setCalendarState('loading');
+    fetchCalendarEventsForDay(new Date())
+      .then((evs) => {
+        if (cancelled) return;
+        setCalendarEvents(evs);
+        setCalendarState('ready');
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        if (e instanceof CalendarAuthError) {
+          setCalendarState('needs-auth');
+        } else {
+          setCalendarError(e instanceof Error ? e.message : 'Error desconocido');
+          setCalendarState('error');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     const days = parseInt(range, 10);
@@ -175,7 +204,7 @@ export function InsightsScreen({ entries }: InsightsScreenProps) {
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 18 }}>
           <div>
             <div style={{ fontSize: 17, fontWeight: 700 }}>Cruzando con tu calendario</div>
-            <div style={{ fontSize: 12.5, color: 'var(--ink-mute)' }}>Estado medio en torno a tus eventos recurrentes</div>
+            <div style={{ fontSize: 12.5, color: 'var(--ink-mute)' }}>Estado medio en torno a tus eventos de hoy</div>
           </div>
           <div
             style={{
@@ -190,11 +219,40 @@ export function InsightsScreen({ entries }: InsightsScreenProps) {
               color: 'var(--ink-soft)',
             }}
           >
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#5cb872' }} />
-            Google Calendar conectado
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: calendarState === 'ready' ? '#5cb872' : calendarState === 'loading' ? '#b8bfcc' : '#e85a4f',
+              }}
+            />
+            {calendarState === 'ready' && 'Google Calendar conectado'}
+            {calendarState === 'loading' && 'Cargando eventos…'}
+            {calendarState === 'needs-auth' && 'Permiso de calendario requerido'}
+            {calendarState === 'error' && 'Error al leer calendario'}
           </div>
         </div>
-        <CalendarCorrelation entries={filtered} />
+
+        {calendarState === 'ready' && calendarEvents && (
+          <CalendarCorrelation entries={filtered} events={calendarEvents} />
+        )}
+        {calendarState === 'loading' && (
+          <div style={{ fontSize: 13, color: 'var(--ink-mute)', textAlign: 'center', padding: 24 }}>Cargando…</div>
+        )}
+        {calendarState === 'needs-auth' && (
+          <div style={{ display: 'grid', gap: 12, padding: '12px 0' }}>
+            <div style={{ fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.55 }}>
+              Necesitamos permiso para leer los eventos de tu Google Calendar. Tu sesión actual no lo incluye o el token caducó.
+            </div>
+            <div>
+              <NeuButton onClick={() => signInWithGoogle()}>Conectar Google Calendar</NeuButton>
+            </div>
+          </div>
+        )}
+        {calendarState === 'error' && (
+          <div style={{ fontSize: 13, color: 'var(--q-red)', padding: 12 }}>{calendarError}</div>
+        )}
       </NeuCard>
 
       <style>{`

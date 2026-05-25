@@ -1,15 +1,23 @@
-import { MOCK_CALENDAR, type CalendarEvent, type Entry } from '../../lib/data';
+import { type CalendarEvent, type Entry } from '../../lib/data';
 import { MoodPill } from './MoodPill';
 
 interface CalendarCorrelationProps {
   entries: Entry[];
+  events: CalendarEvent[];
 }
 
-export function CalendarCorrelation({ entries }: CalendarCorrelationProps) {
-  const rows = MOCK_CALENDAR.map((ev: CalendarEvent) => {
+function hourLabel(h: number) {
+  const hh = Math.floor(h);
+  const mm = Math.round((h - hh) * 60);
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+export function CalendarCorrelation({ entries, events }: CalendarCorrelationProps) {
+  const rows = events.map((ev: CalendarEvent) => {
     const samples = entries.filter((e) => {
       const d = new Date(e.t);
-      return Math.abs(d.getHours() - ev.hour) <= 1;
+      const eH = d.getHours() + d.getMinutes() / 60;
+      return Math.abs(eH - ev.hour) <= 1;
     });
     const n = samples.length;
     const avgP = n ? samples.reduce((a, b) => a + (b.x - 4.5), 0) / n : 0;
@@ -24,6 +32,14 @@ export function CalendarCorrelation({ entries }: CalendarCorrelationProps) {
     wellness: '#4a76c6',
   };
 
+  if (events.length === 0) {
+    return (
+      <div style={{ fontSize: 13, color: 'var(--ink-mute)', textAlign: 'center', padding: 24 }}>
+        No hay eventos en tu Google Calendar para hoy.
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {rows.map((r, i) => (
@@ -31,7 +47,7 @@ export function CalendarCorrelation({ entries }: CalendarCorrelationProps) {
           key={i}
           style={{
             display: 'grid',
-            gridTemplateColumns: '40px 1fr 110px',
+            gridTemplateColumns: '52px 1fr 110px',
             gap: 14,
             alignItems: 'center',
             padding: '10px 14px',
@@ -41,10 +57,10 @@ export function CalendarCorrelation({ entries }: CalendarCorrelationProps) {
           }}
         >
           <div className="mono" style={{ fontSize: 12, color: 'var(--ink-mute)' }}>
-            {String(r.hour).padStart(2, '0')}:00
+            {hourLabel(r.hour)}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: kindColor[r.kind] }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: kindColor[r.kind], flexShrink: 0 }} />
             <span
               style={{
                 fontWeight: 600,
@@ -56,7 +72,7 @@ export function CalendarCorrelation({ entries }: CalendarCorrelationProps) {
             >
               {r.title}
             </span>
-            <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
+            <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', flexShrink: 0 }}>
               ×{r.n}
             </span>
           </div>
