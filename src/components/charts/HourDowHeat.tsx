@@ -22,12 +22,12 @@ export function HourDowHeat({ entries }: HourDowHeatProps) {
     grid[key].n += 1;
   }
 
-  const cellSize = 22;
-  const gap = 4;
+  const cellSize = 17;
+  const gap = 3;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: `28px repeat(${hours.length}, ${cellSize}px)`, gap }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `22px repeat(${hours.length}, ${cellSize}px)`, gap }}>
         <div />
         {hours.map((h) => (
           <div key={h} className="mono" style={{ fontSize: 9.5, color: 'var(--ink-mute)', textAlign: 'center' }}>

@@ -35,7 +35,7 @@ export function LineChart({ data, height = 220 }: LineChartProps) {
       : [0, Math.floor(data.length / 4), Math.floor(data.length / 2), Math.floor((3 * data.length) / 4), data.length - 1];
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }}>
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'hidden', maxWidth: '100%' }}>
       <defs>
         <linearGradient id="lc-pleasant" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor="#5cb872" stopOpacity="0.5" />

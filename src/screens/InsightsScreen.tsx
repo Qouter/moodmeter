@@ -133,7 +133,7 @@ export function InsightsScreen({ entries }: InsightsScreenProps) {
         <RangeSwitch value={range} onChange={setRange} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
         <NeuCard>
           <Stat label="Placer medio" value={`${avgP >= 0 ? '+' : ''}${avgP.toFixed(1)}`} sublabel="-5 a +5" accent="#2e8b48" />
         </NeuCard>
