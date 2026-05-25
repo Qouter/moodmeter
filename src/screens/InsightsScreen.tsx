@@ -18,10 +18,12 @@ type Range = '7' | '14' | '30';
 
 export function InsightsScreen({ entries }: InsightsScreenProps) {
   const [range, setRange] = useState<Range>('7');
-  const { signInWithGoogle } = useAuth();
+  const { session, signInWithGoogle } = useAuth();
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[] | null>(null);
   const [calendarState, setCalendarState] = useState<'loading' | 'ready' | 'needs-auth' | 'error'>('loading');
   const [calendarError, setCalendarError] = useState<string | null>(null);
+
+  const providerToken = session?.provider_token ?? null;
 
   useEffect(() => {
     let cancelled = false;
@@ -44,7 +46,7 @@ export function InsightsScreen({ entries }: InsightsScreenProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [providerToken]);
 
   const filtered = useMemo(() => {
     const days = parseInt(range, 10);
