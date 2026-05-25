@@ -356,9 +356,9 @@ export function SettingsScreen({ onClear, onSeed }: SettingsScreenProps) {
 
           {telegramConnected ? (
             <div style={{ fontSize: 12.5, color: 'var(--ink-mute)', lineHeight: 1.55 }}>
-              Recibirás pings en Telegram según tu configuración. Comandos disponibles:{' '}
-              <span className="mono">/mood</span>, <span className="mono">/pause 2h</span>,{' '}
-              <span className="mono">/skip</span>, <span className="mono">/settings</span>.
+              Recibirás recordatorios en Telegram con un enlace para abrir la app y registrar tu estado. Comandos:{' '}
+              <span className="mono">/pause 2h</span>, <span className="mono">/skip</span>,{' '}
+              <span className="mono">/settings</span>.
             </div>
           ) : (
             <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.7 }}>
