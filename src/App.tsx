@@ -113,8 +113,6 @@ export default function App() {
     setEntries(next);
   };
 
-  const lastEntry = entries.length ? entries[entries.length - 1] : null;
-
   return (
     <div className="app">
       <header style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 22, flexWrap: 'wrap' }}>
@@ -167,7 +165,7 @@ export default function App() {
       </header>
 
       <main>
-        {tab === 'checkin' && <CheckInScreen entries={entries} onAdd={onAdd} lastEntry={lastEntry} />}
+        {tab === 'checkin' && <CheckInScreen entries={entries} onAdd={onAdd} />}
         {tab === 'insights' && <InsightsScreen entries={entries} />}
         {tab === 'history' && <HistoryScreen entries={entries} onDelete={onDelete} />}
         {tab === 'settings' && <SettingsScreen onClear={onClear} onSeed={onSeed} />}

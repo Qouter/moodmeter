@@ -85,9 +85,8 @@ export function HistoryScreen({ entries, onDelete }: HistoryScreenProps) {
                     }}
                   />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 14.5, fontWeight: 700 }}>{e.label}</div>
-                    <div style={{ fontSize: 12.5, color: 'var(--ink-mute)' }}>
-                      <em style={{ fontStyle: 'normal', color: 'var(--ink-soft)' }}>"{e.word || '—'}"</em>
+                    <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--ink)' }}>
+                      {e.word || '—'}
                     </div>
                   </div>
                   <div className="mono" style={{ fontSize: 12, color: 'var(--ink-mute)', textAlign: 'right' }}>

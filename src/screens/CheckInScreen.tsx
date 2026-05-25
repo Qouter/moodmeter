@@ -3,15 +3,14 @@ import { MoodGrid } from '../components/MoodGrid';
 import { NeuCard, NeuButton, BottomSheet } from '../components/primitives';
 import { Icon } from '../components/icons';
 import { cellColor, displayCoord, MOOD_LABELS, quadrant, quadrantMeta, type Entry } from '../lib/data';
-import { formatDate, formatTime, shortDate, timeOfDayGreeting } from '../lib/format';
+import { formatDate, formatTime, timeOfDayGreeting } from '../lib/format';
 
 interface CheckInScreenProps {
   entries: Entry[];
   onAdd: (e: Entry) => void;
-  lastEntry: Entry | null;
 }
 
-export function CheckInScreen({ entries, onAdd, lastEntry }: CheckInScreenProps) {
+export function CheckInScreen({ entries, onAdd }: CheckInScreenProps) {
   const [selected, setSelected] = useState<{ x: number; y: number; label: string } | null>(null);
   const [word, setWord] = useState('');
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -129,28 +128,6 @@ export function CheckInScreen({ entries, onAdd, lastEntry }: CheckInScreenProps)
         </NeuCard>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <NeuCard style={{ padding: 22 }}>
-            <div
-              style={{
-                fontSize: 11.5,
-                fontWeight: 700,
-                color: 'var(--ink-mute)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-                marginBottom: 12,
-              }}
-            >
-              Última entrada
-            </div>
-            {lastEntry ? (
-              <LastEntryPreview entry={lastEntry} />
-            ) : (
-              <div style={{ fontSize: 14, color: 'var(--ink-mute)', lineHeight: 1.55 }}>
-                Aún no hay registros. Elige un cuadrado del mapa para empezar.
-              </div>
-            )}
-          </NeuCard>
-
           <NeuCard style={{ padding: 22 }}>
             <div
               style={{
@@ -327,34 +304,6 @@ export function CheckInScreen({ entries, onAdd, lastEntry }: CheckInScreenProps)
           .checkin-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
-    </div>
-  );
-}
-
-function LastEntryPreview({ entry }: { entry: Entry }) {
-  const d = new Date(entry.t);
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-      <div
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 12,
-          background: cellColor(entry.x, entry.y),
-          boxShadow: '0 4px 10px rgba(40,55,90,.18), inset 0 0 0 1.5px rgba(255,255,255,.6)',
-        }}
-      />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.2 }}>{entry.label}</div>
-        <div style={{ fontSize: 13, color: 'var(--ink-mute)', marginTop: 2 }}>
-          <em style={{ fontStyle: 'normal', color: 'var(--ink-soft)' }}>"{entry.word || '—'}"</em>
-        </div>
-      </div>
-      <div className="mono" style={{ fontSize: 11, color: 'var(--ink-mute)', textAlign: 'right', whiteSpace: 'nowrap' }}>
-        {formatTime(d)}
-        <br />
-        <span style={{ color: 'var(--ink-faint)' }}>{shortDate(d)}</span>
-      </div>
     </div>
   );
 }
