@@ -33,8 +33,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Open design questions to resolve before coding the relevant step
 
 - **Calendar correlation source-of-truth**: keep events in memory on the client, or cache a daily snapshot per user in a `calendar_events_cache` table? (Step 6.)
-- **`mood_entries.label`**: store it (denormalized but resilient if `MOOD_LABELS` changes) or derive on read? Current code stores it.
 - **Multi-device**: this is single-user, but a single user can be on phone + desktop. Realtime subscription to `mood_entries` is a nice-to-have, not a blocker.
+
+`MOOD_LABELS` is kept (used only as `aria-label` on grid cells for screen readers) but **no longer stored**: dropped `mood_entries.label`, removed `Entry.label`, and `MoodGrid.onSelect` no longer carries it. The deliberate "don't show the mood name during selection" rule from the prototype made the stored label dead data once we also removed it from the History list.
 
 ## Commands
 

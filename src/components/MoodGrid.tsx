@@ -9,7 +9,7 @@ interface SelectedCell {
 
 interface MoodGridProps {
   selected?: SelectedCell | null;
-  onSelect?: (cell: { x: number; y: number; label: string }) => void;
+  onSelect?: (cell: { x: number; y: number }) => void;
   size?: string;
   heatmap?: Record<string, number>;
 }
@@ -33,7 +33,7 @@ export function MoodGrid({ selected, onSelect, size, heatmap }: MoodGridProps) {
           key={`${x},${y}`}
           onMouseEnter={() => setHover({ x, y })}
           onMouseLeave={() => setHover(null)}
-          onClick={() => onSelect && onSelect({ x, y, label: MOOD_LABELS[9 - y][x] })}
+          onClick={() => onSelect && onSelect({ x, y })}
           aria-label={MOOD_LABELS[9 - y][x]}
           style={{
             background: color,

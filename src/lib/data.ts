@@ -16,7 +16,6 @@ export interface Entry {
   x: number;
   y: number;
   word: string;
-  label: string;
 }
 
 export interface CalendarEvent {
@@ -140,7 +139,7 @@ async function currentUserId(): Promise<string> {
 export async function loadEntries(): Promise<Entry[]> {
   const { data, error } = await supabase
     .from('mood_entries')
-    .select('id,t,x,y,word,label')
+    .select('id,t,x,y,word')
     .order('t', { ascending: true });
   if (error) throw error;
   return (data ?? []).map((r) => ({
@@ -149,7 +148,6 @@ export async function loadEntries(): Promise<Entry[]> {
     x: r.x as number,
     y: r.y as number,
     word: (r.word as string | null) ?? '',
-    label: (r.label as string | null) ?? '',
   }));
 }
 
@@ -161,7 +159,6 @@ export async function addEntry(entry: Entry): Promise<Entry[]> {
     x: entry.x,
     y: entry.y,
     word: entry.word,
-    label: entry.label,
   });
   if (error) throw error;
   return loadEntries();
@@ -184,7 +181,7 @@ export async function seedIfEmpty(): Promise<Entry[]> {
 
   const user_id = await currentUserId();
   const now = new Date();
-  const rows: Array<{ user_id: string; t: string; x: number; y: number; word: string; label: string }> = [];
+  const rows: Array<{ user_id: string; t: string; x: number; y: number; word: string }> = [];
   const wordsByQuad: Record<Quadrant, string[]> = {
     'high-unpleasant': ['agobio', 'prisa', 'tensión', 'frustración', 'enfado', 'ansiedad'],
     'high-pleasant': ['flow', 'foco', 'energía', 'chispa', 'motivado', 'optimismo', 'impulso'],
@@ -218,7 +215,6 @@ export async function seedIfEmpty(): Promise<Entry[]> {
         x,
         y,
         word,
-        label: MOOD_LABELS[9 - y][x],
       });
     }
   }

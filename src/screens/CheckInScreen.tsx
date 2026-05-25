@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { MoodGrid } from '../components/MoodGrid';
 import { NeuCard, NeuButton, BottomSheet } from '../components/primitives';
 import { Icon } from '../components/icons';
-import { cellColor, displayCoord, MOOD_LABELS, quadrant, quadrantMeta, type Entry } from '../lib/data';
+import { cellColor, displayCoord, quadrant, quadrantMeta, type Entry } from '../lib/data';
 import { formatDate, formatTime, timeOfDayGreeting } from '../lib/format';
 
 interface CheckInScreenProps {
@@ -11,13 +11,13 @@ interface CheckInScreenProps {
 }
 
 export function CheckInScreen({ entries, onAdd }: CheckInScreenProps) {
-  const [selected, setSelected] = useState<{ x: number; y: number; label: string } | null>(null);
+  const [selected, setSelected] = useState<{ x: number; y: number } | null>(null);
   const [word, setWord] = useState('');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const onSelect = (cell: { x: number; y: number; label: string }) => {
+  const onSelect = (cell: { x: number; y: number }) => {
     setSelected(cell);
     setWord('');
     setSheetOpen(true);
@@ -32,7 +32,6 @@ export function CheckInScreen({ entries, onAdd }: CheckInScreenProps) {
       x: selected.x,
       y: selected.y,
       word: word.trim(),
-      label: MOOD_LABELS[9 - selected.y][selected.x],
     };
     onAdd(entry);
     setSheetOpen(false);
