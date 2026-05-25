@@ -114,6 +114,21 @@ export interface UserSettings {
   telegram_on: boolean;
   calendar_on: boolean;
   telegram_chat_id: string | null;
+  telegram_link_token: string | null;
+}
+
+export const TELEGRAM_BOT_USERNAME = 'moodmeter_thebot';
+
+export function generateLinkToken(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  let out = 'MM-';
+  for (let i = 0; i < 8; i++) {
+    out += alphabet[bytes[i] % alphabet.length];
+    if (i === 3) out += '-';
+  }
+  return out;
 }
 
 async function currentUserId(): Promise<string> {
@@ -225,12 +240,13 @@ const DEFAULT_SETTINGS: UserSettings = {
   telegram_on: false,
   calendar_on: false,
   telegram_chat_id: null,
+  telegram_link_token: null,
 };
 
 export async function loadSettings(): Promise<UserSettings> {
   const { data, error } = await supabase
     .from('user_settings')
-    .select('name,mode,pings_per_day,window_start,window_end,weekend_mode,night_silence,contextual,telegram_on,calendar_on,telegram_chat_id')
+    .select('name,mode,pings_per_day,window_start,window_end,weekend_mode,night_silence,contextual,telegram_on,calendar_on,telegram_chat_id,telegram_link_token')
     .maybeSingle();
   if (error) throw error;
   if (!data) return DEFAULT_SETTINGS;
@@ -246,6 +262,7 @@ export async function loadSettings(): Promise<UserSettings> {
     telegram_on: (data.telegram_on as boolean) ?? false,
     calendar_on: (data.calendar_on as boolean) ?? false,
     telegram_chat_id: (data.telegram_chat_id as string | null) ?? null,
+    telegram_link_token: (data.telegram_link_token as string | null) ?? null,
   };
 }
 

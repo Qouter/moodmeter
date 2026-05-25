@@ -68,7 +68,7 @@ export function QuadrantDonut({ counts, size = 180 }: QuadrantDonutProps) {
         {arcs.map((a) => (
           <div key={a.q} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ width: 12, height: 12, borderRadius: 4, background: a.color, boxShadow: '0 2px 4px rgba(40,55,90,.18)' }} />
-            <span style={{ color: 'var(--ink-soft)', minWidth: 180, fontWeight: 500, whiteSpace: 'nowrap' }}>{labelQ(a.q)}</span>
+            <span style={{ color: 'var(--ink-soft)', flex: 1, minWidth: 0, fontWeight: 500 }}>{labelQ(a.q)}</span>
             <span className="mono" style={{ color: 'var(--ink)', fontWeight: 600 }}>
               {Math.round(a.frac * 100)}%
             </span>

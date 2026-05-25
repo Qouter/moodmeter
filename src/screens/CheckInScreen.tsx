@@ -61,8 +61,8 @@ export function CheckInScreen({ entries, onAdd }: CheckInScreenProps) {
 
   return (
     <div style={{ display: 'grid', gap: 22 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 18, alignItems: 'center' }}>
-        <div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'center' }}>
+        <div style={{ minWidth: 0, flex: '1 1 200px' }}>
           <div
             style={{
               fontSize: 13,
@@ -79,7 +79,7 @@ export function CheckInScreen({ entries, onAdd }: CheckInScreenProps) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <NeuCard inset style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 90 }}>
+          <NeuCard inset style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 72 }}>
             <span className="mono" style={{ fontSize: 24, fontWeight: 700 }}>
               {today}
             </span>
@@ -95,7 +95,7 @@ export function CheckInScreen({ entries, onAdd }: CheckInScreenProps) {
               hoy
             </span>
           </NeuCard>
-          <NeuCard inset style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 90 }}>
+          <NeuCard inset style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 72 }}>
             <span className="mono" style={{ fontSize: 24, fontWeight: 700 }}>
               {entries.length}
             </span>

@@ -13,7 +13,13 @@ import {
 } from '../components/settings/controls';
 import { SchedulePreview } from '../components/settings/SchedulePreview';
 import { computeSchedule } from '../lib/format';
-import { loadSettings, saveSettings, type UserSettings } from '../lib/data';
+import {
+  loadSettings,
+  saveSettings,
+  generateLinkToken,
+  TELEGRAM_BOT_USERNAME,
+  type UserSettings,
+} from '../lib/data';
 
 interface SettingsScreenProps {
   onClear: () => void;
@@ -38,7 +44,16 @@ export function SettingsScreen({ onClear, onSeed }: SettingsScreenProps) {
     let cancelled = false;
     loadSettings()
       .then((s) => {
-        if (!cancelled) setSettings(s);
+        if (cancelled) return;
+        if (!s.telegram_link_token) {
+          const token = generateLinkToken();
+          setSettings({ ...s, telegram_link_token: token });
+          saveSettings({ telegram_link_token: token }).catch((e) =>
+            console.error('No se pudo guardar el token de Telegram:', e),
+          );
+        } else {
+          setSettings(s);
+        }
       })
       .catch((e) => console.error('No se pudieron cargar los ajustes:', e));
     return () => {
@@ -95,7 +110,10 @@ export function SettingsScreen({ onClear, onSeed }: SettingsScreenProps) {
     contextual,
     telegram_on: telegramOn,
     calendar_on: calendarOn,
+    telegram_chat_id: telegramChatId,
+    telegram_link_token: telegramLinkToken,
   } = settings;
+  const telegramConnected = !!telegramChatId;
 
   const setName = (v: string) => update({ name: v });
   const setTelegramOn = (v: boolean) => update({ telegram_on: v });
@@ -125,7 +143,8 @@ export function SettingsScreen({ onClear, onSeed }: SettingsScreenProps) {
               borderRadius: 12,
               boxShadow: 'var(--neu-in)',
               padding: '6px 12px',
-              width: 220,
+              width: '100%',
+              maxWidth: 220,
             }}
           >
             <input
@@ -327,31 +346,44 @@ export function SettingsScreen({ onClear, onSeed }: SettingsScreenProps) {
           />
         </div>
 
-        <details style={{ marginTop: 18 }}>
-          <summary style={{ cursor: 'pointer', fontSize: 12.5, color: 'var(--ink-mute)', fontWeight: 600, padding: '4px 0' }}>
-            Cómo conectar el bot
-          </summary>
-          <div style={{ marginTop: 12, padding: 16, borderRadius: 14, background: 'var(--bg)', boxShadow: 'var(--neu-in)' }}>
+        <div style={{ marginTop: 18, padding: 16, borderRadius: 14, background: 'var(--bg)', boxShadow: 'var(--neu-in)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: telegramConnected ? '#2e8b48' : '#b8bfcc' }} />
+            <span style={{ fontSize: 12.5, color: 'var(--ink-soft)', fontWeight: 600 }}>
+              {telegramConnected ? 'Bot conectado' : 'Sin conexión'}
+            </span>
+          </div>
+
+          {telegramConnected ? (
+            <div style={{ fontSize: 12.5, color: 'var(--ink-mute)', lineHeight: 1.55 }}>
+              Recibirás pings en Telegram según tu configuración. Comandos disponibles:{' '}
+              <span className="mono">/mood</span>, <span className="mono">/pause 2h</span>,{' '}
+              <span className="mono">/skip</span>, <span className="mono">/settings</span>.
+            </div>
+          ) : (
             <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.7 }}>
               <li>
-                Abre tu app de mensajería y busca <span className="mono" style={{ color: 'var(--ink)' }}>@moodmeter_bot</span>
+                Abre Telegram y busca{' '}
+                <a
+                  href={`https://t.me/${TELEGRAM_BOT_USERNAME}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mono"
+                  style={{ color: 'var(--ink)', textDecoration: 'underline' }}
+                >
+                  @{TELEGRAM_BOT_USERNAME}
+                </a>
               </li>
               <li>
-                Envía <span className="mono" style={{ color: 'var(--ink)' }}>/start MM-A7K2-XQ91</span> para vincular tu cuenta
-              </li>
-              <li>
-                Comandos útiles: <span className="mono">/mood</span>, <span className="mono">/pause 2h</span>,{' '}
-                <span className="mono">/skip</span>, <span className="mono">/settings</span>
+                Envía{' '}
+                <span className="mono" style={{ color: 'var(--ink)' }}>
+                  /start {telegramLinkToken ?? '…'}
+                </span>{' '}
+                para vincular tu cuenta
               </li>
             </ol>
-            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: telegramOn ? '#2e8b48' : '#b8bfcc' }} />
-              <span style={{ fontSize: 12.5, color: 'var(--ink-soft)', fontWeight: 600 }}>
-                {telegramOn ? `Bot conectado · @${name.toLowerCase()}` : 'Sin conexión'}
-              </span>
-            </div>
-          </div>
-        </details>
+          )}
+        </div>
       </NeuCard>
 
       <NeuCard style={{ padding: 24 }}>
