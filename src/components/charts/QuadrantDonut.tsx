@@ -5,15 +5,6 @@ interface QuadrantDonutProps {
   size?: number;
 }
 
-function labelQ(q: Quadrant): string {
-  return {
-    'high-pleasant': 'Alta energía · Agradable',
-    'high-unpleasant': 'Alta energía · Desagradable',
-    'low-unpleasant': 'Baja energía · Desagradable',
-    'low-pleasant': 'Baja energía · Agradable',
-  }[q];
-}
-
 export function QuadrantDonut({ counts, size = 180 }: QuadrantDonutProps) {
   const total = Object.values(counts).reduce<number>((a, b) => a + (b ?? 0), 0) || 1;
   const order: Quadrant[] = ['high-pleasant', 'high-unpleasant', 'low-unpleasant', 'low-pleasant'];
@@ -64,11 +55,10 @@ export function QuadrantDonut({ counts, size = 180 }: QuadrantDonutProps) {
           CHECK-INS
         </text>
       </svg>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 14 }}>
         {arcs.map((a) => (
-          <div key={a.q} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ width: 12, height: 12, borderRadius: 4, background: a.color, boxShadow: '0 2px 4px rgba(40,55,90,.18)' }} />
-            <span style={{ color: 'var(--ink-soft)', flex: 1, minWidth: 0, fontWeight: 500 }}>{labelQ(a.q)}</span>
+          <div key={a.q} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ width: 14, height: 14, borderRadius: 4, background: a.color, boxShadow: '0 2px 4px rgba(40,55,90,.18)' }} />
             <span className="mono" style={{ color: 'var(--ink)', fontWeight: 600 }}>
               {Math.round(a.frac * 100)}%
             </span>

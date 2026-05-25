@@ -20,6 +20,7 @@ import {
   TELEGRAM_BOT_USERNAME,
   type UserSettings,
 } from '../lib/data';
+import { useAuth } from '../lib/auth';
 
 interface SettingsScreenProps {
   onClear: () => void;
@@ -36,6 +37,7 @@ function hToStr(h: number) {
 }
 
 export function SettingsScreen({ onClear, onSeed }: SettingsScreenProps) {
+  const { session, signInWithGoogle } = useAuth();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingPatch = useRef<Partial<UserSettings>>({});
@@ -114,6 +116,8 @@ export function SettingsScreen({ onClear, onSeed }: SettingsScreenProps) {
     telegram_link_token: telegramLinkToken,
   } = settings;
   const telegramConnected = !!telegramChatId;
+  const calendarConnected = !!session?.provider_token;
+  const calendarEmail = session?.user?.email ?? null;
 
   const setName = (v: string) => update({ name: v });
   const setTelegramOn = (v: boolean) => update({ telegram_on: v });
@@ -410,14 +414,21 @@ export function SettingsScreen({ onClear, onSeed }: SettingsScreenProps) {
         </div>
 
         <div style={{ padding: 16, borderRadius: 14, background: 'var(--bg)', boxShadow: 'var(--neu-in)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: calendarOn ? '#2e8b48' : '#b8bfcc' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: calendarConnected ? '#2e8b48' : '#b8bfcc' }} />
             <span style={{ fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600 }}>
-              {calendarOn ? 'Conectado · diego@gmail.com' : 'Sin conexión'}
+              {calendarConnected
+                ? `Conectado${calendarEmail ? ` · ${calendarEmail}` : ''}`
+                : 'Sin conexión · vuelve a iniciar sesión para refrescar el permiso'}
             </span>
+            {!calendarConnected && (
+              <NeuButton onClick={() => signInWithGoogle()} style={{ marginLeft: 'auto', padding: '6px 12px', fontSize: 12 }}>
+                Reconectar
+              </NeuButton>
+            )}
           </div>
           <div style={{ fontSize: 12.5, color: 'var(--ink-mute)', lineHeight: 1.6 }}>
-            Permisos: <span className="mono" style={{ color: 'var(--ink-soft)' }}>calendar.events.readonly</span>. Los eventos se leen para correlación en Insights — nunca se modifican.
+            Permisos: <span className="mono" style={{ color: 'var(--ink-soft)' }}>calendar.readonly</span>. Los eventos se leen para correlación en Insights — nunca se modifican.
           </div>
         </div>
       </NeuCard>

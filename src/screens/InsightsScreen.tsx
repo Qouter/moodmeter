@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { NeuCard, NeuButton, Stat } from '../components/primitives';
 import { MoodGrid } from '../components/MoodGrid';
-import { LineChart } from '../components/charts/LineChart';
 import { QuadrantDonut } from '../components/charts/QuadrantDonut';
 import { HourDowHeat } from '../components/charts/HourDowHeat';
-import { TopWords } from '../components/charts/TopWords';
 import { CalendarCorrelation } from '../components/charts/CalendarCorrelation';
 import { quadrant, type CalendarEvent, type Entry, type Quadrant } from '../lib/data';
 import { fetchCalendarEventsForDay, CalendarAuthError } from '../lib/calendar';
@@ -48,40 +46,14 @@ export function InsightsScreen({ entries }: InsightsScreenProps) {
     };
   }, [providerToken]);
 
+  const days = parseInt(range, 10);
+
   const filtered = useMemo(() => {
-    const days = parseInt(range, 10);
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days + 1);
     cutoff.setHours(0, 0, 0, 0);
     return entries.filter((e) => new Date(e.t) >= cutoff);
-  }, [entries, range]);
-
-  const dailyData = useMemo(() => {
-    const days = parseInt(range, 10);
-    const buckets: Record<string, { date: Date; sumP: number; sumE: number; n: number }> = {};
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      d.setHours(0, 0, 0, 0);
-      buckets[d.toDateString()] = { date: d, sumP: 0, sumE: 0, n: 0 };
-    }
-    for (const e of filtered) {
-      const key = new Date(e.t);
-      key.setHours(0, 0, 0, 0);
-      const k = key.toDateString();
-      if (buckets[k]) {
-        buckets[k].sumP += e.x - 4.5;
-        buckets[k].sumE += e.y - 4.5;
-        buckets[k].n += 1;
-      }
-    }
-    return Object.values(buckets).map((b) => ({
-      date: b.date,
-      label: b.date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }),
-      pleasantness: b.n ? b.sumP / b.n : 0,
-      energy: b.n ? b.sumE / b.n : 0,
-    }));
-  }, [filtered, range]);
+  }, [entries, days]);
 
   const counts = useMemo(() => {
     const c: Partial<Record<Quadrant, number>> = {};
@@ -92,14 +64,60 @@ export function InsightsScreen({ entries }: InsightsScreenProps) {
     return c;
   }, [filtered]);
 
+  const [heatDayIdx, setHeatDayIdx] = useState(days - 1);
+  const [heatPlaying, setHeatPlaying] = useState(false);
+  const playTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    setHeatDayIdx(days - 1);
+    setHeatPlaying(false);
+  }, [days]);
+
+  useEffect(() => {
+    if (!heatPlaying) {
+      if (playTimer.current) clearInterval(playTimer.current);
+      playTimer.current = null;
+      return;
+    }
+    playTimer.current = setInterval(() => {
+      setHeatDayIdx((i) => {
+        if (i >= days - 1) {
+          setHeatPlaying(false);
+          return days - 1;
+        }
+        return i + 1;
+      });
+    }, 450);
+    return () => {
+      if (playTimer.current) clearInterval(playTimer.current);
+    };
+  }, [heatPlaying, days]);
+
+  const cursorDate = useMemo(() => {
+    const d = new Date();
+    d.setHours(23, 59, 59, 999);
+    d.setDate(d.getDate() - (days - 1 - heatDayIdx));
+    return d;
+  }, [days, heatDayIdx]);
+
   const heat = useMemo(() => {
     const h: Record<string, number> = {};
-    for (const e of filtered) h[`${e.x},${e.y}`] = (h[`${e.x},${e.y}`] || 0) + 1;
+    const cursorMs = cursorDate.getTime();
+    for (const e of filtered) {
+      if (new Date(e.t).getTime() > cursorMs) continue;
+      h[`${e.x},${e.y}`] = (h[`${e.x},${e.y}`] || 0) + 1;
+    }
     return h;
-  }, [filtered]);
+  }, [filtered, cursorDate]);
 
-  const avgP = filtered.length ? filtered.reduce((a, b) => a + (b.x - 4.5), 0) / filtered.length : 0;
-  const avgE = filtered.length ? filtered.reduce((a, b) => a + (b.y - 4.5), 0) / filtered.length : 0;
+  const heatTotal = useMemo(() => Object.values(heat).reduce((a, b) => a + b, 0), [heat]);
+
+  const togglePlay = () => {
+    setHeatPlaying((p) => {
+      if (!p && heatDayIdx >= days - 1) setHeatDayIdx(0);
+      return !p;
+    });
+  };
 
   const streak = useMemo(() => {
     let s = 0;
@@ -133,13 +151,7 @@ export function InsightsScreen({ entries }: InsightsScreenProps) {
         <RangeSwitch value={range} onChange={setRange} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
-        <NeuCard>
-          <Stat label="Placer medio" value={`${avgP >= 0 ? '+' : ''}${avgP.toFixed(1)}`} sublabel="-5 a +5" accent="#2e8b48" />
-        </NeuCard>
-        <NeuCard>
-          <Stat label="Energía media" value={`${avgE >= 0 ? '+' : ''}${avgE.toFixed(1)}`} sublabel="-5 a +5" accent="#e85a4f" />
-        </NeuCard>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
         <NeuCard>
           <Stat label="Registros" value={filtered.length} sublabel={`en ${range} días`} />
         </NeuCard>
@@ -147,24 +159,6 @@ export function InsightsScreen({ entries }: InsightsScreenProps) {
           <Stat label="Racha" value={`${streak}d`} sublabel="días consecutivos" accent="var(--accent)" />
         </NeuCard>
       </div>
-
-      <NeuCard style={{ padding: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
-          <div>
-            <div style={{ fontSize: 17, fontWeight: 700 }}>Tu estado en el tiempo</div>
-            <div style={{ fontSize: 12.5, color: 'var(--ink-mute)' }}>Media diaria de placer y energía</div>
-          </div>
-          <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--ink-soft)' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 14, height: 3, borderRadius: 2, background: '#2e8b48' }} /> Placer
-            </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 14, height: 3, borderRadius: 2, background: '#e85a4f' }} /> Energía
-            </span>
-          </div>
-        </div>
-        <LineChart data={dailyData} />
-      </NeuCard>
 
       <div
         style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 20 }}
@@ -185,22 +179,61 @@ export function InsightsScreen({ entries }: InsightsScreenProps) {
         </NeuCard>
       </div>
 
-      <div
-        style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 20 }}
-        className="insight-2col"
-      >
-        <NeuCard style={{ padding: 24 }}>
-          <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Mapa de calor</div>
-          <div style={{ fontSize: 12.5, color: 'var(--ink-mute)', marginBottom: 18 }}>Frecuencia por celda</div>
-          <MoodGrid heatmap={heat} />
-        </NeuCard>
-
-        <NeuCard style={{ padding: 24 }}>
-          <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Palabras más usadas</div>
-          <div style={{ fontSize: 12.5, color: 'var(--ink-mute)', marginBottom: 18 }}>Tu vocabulario emocional</div>
-          <TopWords entries={filtered} />
-        </NeuCard>
-      </div>
+      <NeuCard style={{ padding: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 18 }}>
+          <div>
+            <div style={{ fontSize: 17, fontWeight: 700 }}>Mapa de calor</div>
+            <div style={{ fontSize: 12.5, color: 'var(--ink-mute)' }}>Cómo se llena tu mapa día a día</div>
+          </div>
+          <div className="mono" style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
+            {cursorDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+            <span style={{ color: 'var(--ink-faint)' }}> · {heatTotal} registros</span>
+          </div>
+        </div>
+        <MoodGrid heatmap={heat} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 18 }}>
+          <button
+            onClick={togglePlay}
+            aria-label={heatPlaying ? 'Pausar' : 'Reproducir'}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: '50%',
+              background: 'var(--bg)',
+              boxShadow: heatPlaying ? 'var(--neu-in)' : 'var(--neu-out-sm)',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'grid',
+              placeItems: 'center',
+              color: 'var(--ink-soft)',
+              flexShrink: 0,
+              transition: 'box-shadow .15s ease',
+            }}
+          >
+            {heatPlaying ? (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                <rect x="3" y="2" width="3" height="10" rx="1" />
+                <rect x="8" y="2" width="3" height="10" rx="1" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                <path d="M3 2 L12 7 L3 12 Z" />
+              </svg>
+            )}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={days - 1}
+            value={heatDayIdx}
+            onChange={(e) => {
+              setHeatPlaying(false);
+              setHeatDayIdx(parseInt(e.target.value, 10));
+            }}
+            style={{ flex: 1, accentColor: 'var(--accent)' }}
+          />
+        </div>
+      </NeuCard>
 
       <NeuCard style={{ padding: 24 }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 18 }}>

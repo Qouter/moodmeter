@@ -74,18 +74,6 @@ export function HourDowHeat({ entries }: HourDowHeatProps) {
           </Fragment>
         ))}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, fontSize: 10.5, color: 'var(--ink-mute)' }}>
-        <span>menos agradable</span>
-        <span
-          style={{
-            width: 90,
-            height: 8,
-            borderRadius: 4,
-            background: 'linear-gradient(90deg, #e85a4f, rgba(40,55,90,.1), #5cb872)',
-          }}
-        />
-        <span>más agradable</span>
-      </div>
     </div>
   );
 }
