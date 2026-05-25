@@ -108,6 +108,36 @@ export function MoodGrid({ selected, onSelect, size, heatmap }: MoodGridProps) {
         }}
       >
         {rows.flat()}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: 12,
+            right: 12,
+            top: '50%',
+            height: 1.5,
+            transform: 'translateY(-50%)',
+            background: 'rgba(40,55,90,0.28)',
+            pointerEvents: 'none',
+            zIndex: 6,
+            borderRadius: 1,
+          }}
+        />
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: 12,
+            bottom: 12,
+            left: '50%',
+            width: 1.5,
+            transform: 'translateX(-50%)',
+            background: 'rgba(40,55,90,0.28)',
+            pointerEvents: 'none',
+            zIndex: 6,
+            borderRadius: 1,
+          }}
+        />
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 2 }}>

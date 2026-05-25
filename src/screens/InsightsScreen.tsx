@@ -64,41 +64,49 @@ export function InsightsScreen({ entries }: InsightsScreenProps) {
     return c;
   }, [filtered]);
 
-  const [heatDayIdx, setHeatDayIdx] = useState(days - 1);
+  const [heatPos, setHeatPos] = useState(days - 1);
   const [heatPlaying, setHeatPlaying] = useState(false);
-  const playTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const heatPosRef = useRef(heatPos);
+  heatPosRef.current = heatPos;
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
-    setHeatDayIdx(days - 1);
+    setHeatPos(days - 1);
     setHeatPlaying(false);
   }, [days]);
 
   useEffect(() => {
     if (!heatPlaying) {
-      if (playTimer.current) clearInterval(playTimer.current);
-      playTimer.current = null;
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
       return;
     }
-    playTimer.current = setInterval(() => {
-      setHeatDayIdx((i) => {
-        if (i >= days - 1) {
-          setHeatPlaying(false);
-          return days - 1;
-        }
-        return i + 1;
-      });
-    }, 450);
+    const daysPerSecond = 2.4;
+    let lastT = performance.now();
+    const tick = (now: number) => {
+      const dt = (now - lastT) / 1000;
+      lastT = now;
+      const next = heatPosRef.current + dt * daysPerSecond;
+      if (next >= days - 1) {
+        setHeatPos(days - 1);
+        setHeatPlaying(false);
+        return;
+      }
+      setHeatPos(next);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
     return () => {
-      if (playTimer.current) clearInterval(playTimer.current);
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
     };
   }, [heatPlaying, days]);
 
   const cursorDate = useMemo(() => {
-    const d = new Date();
-    d.setHours(23, 59, 59, 999);
-    d.setDate(d.getDate() - (days - 1 - heatDayIdx));
-    return d;
-  }, [days, heatDayIdx]);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    const daysBack = days - 1 - heatPos;
+    return new Date(todayEnd.getTime() - daysBack * 86_400_000);
+  }, [days, heatPos]);
 
   const heat = useMemo(() => {
     const h: Record<string, number> = {};
@@ -114,7 +122,7 @@ export function InsightsScreen({ entries }: InsightsScreenProps) {
 
   const togglePlay = () => {
     setHeatPlaying((p) => {
-      if (!p && heatDayIdx >= days - 1) setHeatDayIdx(0);
+      if (!p && heatPosRef.current >= days - 1) setHeatPos(0);
       return !p;
     });
   };
@@ -225,10 +233,11 @@ export function InsightsScreen({ entries }: InsightsScreenProps) {
             type="range"
             min={0}
             max={days - 1}
-            value={heatDayIdx}
+            step="any"
+            value={heatPos}
             onChange={(e) => {
               setHeatPlaying(false);
-              setHeatDayIdx(parseInt(e.target.value, 10));
+              setHeatPos(parseFloat(e.target.value));
             }}
             style={{ flex: 1, accentColor: 'var(--accent)' }}
           />
