@@ -41,7 +41,7 @@ export function SchedulePreview({
 
         {mode === 'manual' ? (
           <div style={{ fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.6, padding: '12px 0' }}>
-            No habrá recordatorios automáticos. Escribe <span className="mono" style={{ color: 'var(--ink)' }}>/mood</span> cuando quieras registrar.
+            No habrá recordatorios automáticos. Registra tu estado en la app cuando quieras.
           </div>
         ) : schedule.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.6, padding: '12px 0' }}>

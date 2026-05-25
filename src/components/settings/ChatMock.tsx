@@ -44,8 +44,8 @@ export function ChatMock() {
             color: 'var(--ink)',
           }}
         >
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--accent)', marginBottom: 4 }}>moodmeter_bot</div>
-          ¿Cómo te encuentras ahora mismo? Abre el mapa o respóndeme con una palabra.
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--accent)', marginBottom: 4 }}>moodmeter_thebot</div>
+          ¿Cómo te encuentras ahora mismo? Abre el mapa para registrar tu estado.
           <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
             <ChipBtn>Abrir mapa</ChipBtn>
             <ChipBtn>Saltar</ChipBtn>
