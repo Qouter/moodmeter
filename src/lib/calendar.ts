@@ -1,12 +1,20 @@
 import { supabase } from './supabase';
 import type { CalendarEvent } from './data';
 
-const CALENDAR_API = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+const CALENDAR_BASE = 'https://www.googleapis.com/calendar/v3';
 
 interface GCalEvent {
   summary?: string;
   start?: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
+}
+
+interface GCalListEntry {
+  id: string;
+  summary?: string;
+  selected?: boolean;
+  accessRole?: string;
+  primary?: boolean;
 }
 
 function classifyEventKind(title: string): CalendarEvent['kind'] {
@@ -24,44 +32,74 @@ export class CalendarAuthError extends Error {
   }
 }
 
-export async function fetchCalendarEventsForDay(date: Date): Promise<CalendarEvent[]> {
+async function getProviderToken(): Promise<string> {
   const { data } = await supabase.auth.getSession();
-  const session = data.session;
-  if (!session?.provider_token) throw new CalendarAuthError();
+  const token = data.session?.provider_token;
+  if (!token) throw new CalendarAuthError();
+  return token;
+}
+
+async function gcalGet<T>(token: string, path: string, params: Record<string, string> = {}): Promise<T> {
+  const url = new URL(`${CALENDAR_BASE}${path}`);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  const res = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401 || res.status === 403) throw new CalendarAuthError();
+  if (!res.ok) throw new Error(`Google Calendar API ${res.status}: ${await res.text()}`);
+  return res.json() as Promise<T>;
+}
+
+async function listCalendars(token: string): Promise<GCalListEntry[]> {
+  const body = await gcalGet<{ items?: GCalListEntry[] }>(token, '/users/me/calendarList', {
+    minAccessRole: 'reader',
+    showHidden: 'false',
+  });
+  return (body.items ?? []).filter((c) => c.selected !== false);
+}
+
+async function fetchEventsForCalendar(token: string, calendarId: string, timeMin: string, timeMax: string): Promise<GCalEvent[]> {
+  const body = await gcalGet<{ items?: GCalEvent[] }>(token, `/calendars/${encodeURIComponent(calendarId)}/events`, {
+    timeMin,
+    timeMax,
+    singleEvents: 'true',
+    orderBy: 'startTime',
+    maxResults: '50',
+  });
+  return body.items ?? [];
+}
+
+export async function fetchCalendarEventsForDay(date: Date): Promise<CalendarEvent[]> {
+  const token = await getProviderToken();
 
   const dayStart = new Date(date);
   dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(dayStart);
   dayEnd.setDate(dayEnd.getDate() + 1);
+  const timeMin = dayStart.toISOString();
+  const timeMax = dayEnd.toISOString();
 
-  const url = new URL(CALENDAR_API);
-  url.searchParams.set('timeMin', dayStart.toISOString());
-  url.searchParams.set('timeMax', dayEnd.toISOString());
-  url.searchParams.set('singleEvents', 'true');
-  url.searchParams.set('orderBy', 'startTime');
-  url.searchParams.set('maxResults', '50');
+  const calendars = await listCalendars(token);
 
-  const res = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${session.provider_token}` },
-  });
+  const results = await Promise.allSettled(
+    calendars.map((c) => fetchEventsForCalendar(token, c.id, timeMin, timeMax)),
+  );
 
-  if (res.status === 401 || res.status === 403) throw new CalendarAuthError();
-  if (!res.ok) throw new Error(`Google Calendar API ${res.status}: ${await res.text()}`);
-
-  const body = await res.json();
-  const items: GCalEvent[] = body.items ?? [];
-
-  return items
-    .filter((it) => it.start?.dateTime && it.end?.dateTime)
-    .map((it) => {
-      const start = new Date(it.start!.dateTime!);
-      const end = new Date(it.end!.dateTime!);
-      const durMin = Math.round((end.getTime() - start.getTime()) / 60000);
-      return {
+  const events: CalendarEvent[] = [];
+  for (const r of results) {
+    if (r.status !== 'fulfilled') continue;
+    for (const it of r.value) {
+      if (!it.start?.dateTime || !it.end?.dateTime) continue;
+      const start = new Date(it.start.dateTime);
+      const end = new Date(it.end.dateTime);
+      events.push({
         title: it.summary?.trim() || 'Sin título',
         kind: classifyEventKind(it.summary ?? ''),
         hour: start.getHours() + start.getMinutes() / 60,
-        durMin,
-      };
-    });
+        durMin: Math.round((end.getTime() - start.getTime()) / 60000),
+      });
+    }
+  }
+  events.sort((a, b) => a.hour - b.hour);
+  return events;
 }
