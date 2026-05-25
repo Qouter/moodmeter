@@ -81,7 +81,6 @@ export function MoodGrid({ selected, onSelect, size, heatmap }: MoodGridProps) {
     rows.push(cells);
   }
 
-  const xLabels = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
   const innerSize = size || 'min(72vh, 560px)';
 
   return (
@@ -93,61 +92,25 @@ export function MoodGrid({ selected, onSelect, size, heatmap }: MoodGridProps) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'stretch', width: '100%' }}>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            alignItems: 'flex-end',
-            color: 'var(--ink-mute)',
-            fontSize: 11,
-            width: 18,
-            fontFamily: 'JetBrains Mono, monospace',
-          }}
-        >
-          {[5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5].map((v) => (
-            <div key={v} style={{ height: 0, transform: 'translateY(-4px)' }}>
-              {v}
-            </div>
-          ))}
-        </div>
-
-        <div
-          className="neu-inset"
-          style={{
-            padding: 12,
-            borderRadius: 20,
-            flex: 1,
-            aspectRatio: '1 / 1',
-            maxWidth: innerSize,
-            display: 'grid',
-            gridTemplateRows: 'repeat(10, 1fr)',
-            gridTemplateColumns: 'repeat(10, 1fr)',
-            gap: 3,
-            position: 'relative',
-          }}
-        >
-          {rows.flat()}
-        </div>
-      </div>
-
       <div
+        className="neu-inset"
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
+          padding: 12,
+          borderRadius: 20,
           width: '100%',
-          paddingLeft: 26,
-          color: 'var(--ink-mute)',
-          fontSize: 11,
-          fontFamily: 'JetBrains Mono, monospace',
+          aspectRatio: '1 / 1',
+          maxWidth: innerSize,
+          display: 'grid',
+          gridTemplateRows: 'repeat(10, 1fr)',
+          gridTemplateColumns: 'repeat(10, 1fr)',
+          gap: 3,
+          position: 'relative',
         }}
       >
-        {xLabels.map((v) => (
-          <div key={v}>{v}</div>
-        ))}
+        {rows.flat()}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingLeft: 26, marginTop: 2 }}>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 2 }}>
         <div style={{ fontSize: 12, color: 'var(--ink-mute)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
           ← desagradable agradable →
         </div>

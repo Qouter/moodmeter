@@ -1,39 +1,24 @@
+import { cellColor } from '../../lib/data';
+
 interface MoodPillProps {
   p: number;
   e: number;
 }
+
 export function MoodPill({ p, e }: MoodPillProps) {
-  const ratioP = (p + 5) / 10;
-  const ratioE = (e + 5) / 10;
+  const x = Math.max(0, Math.min(9, Math.round(p + 4.5)));
+  const y = Math.max(0, Math.min(9, Math.round(e + 4.5)));
   return (
-    <div
+    <span
+      aria-hidden="true"
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '6px 10px',
+        display: 'inline-block',
+        width: 44,
+        height: 14,
         borderRadius: 999,
-        background: 'var(--bg)',
-        boxShadow: 'var(--neu-in)',
-        fontSize: 11,
-        fontFamily: 'JetBrains Mono',
+        background: cellColor(x, y),
+        boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,.6), 0 2px 4px rgba(40,55,90,.18)',
       }}
-    >
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-        <span style={{ width: 8, height: 8, borderRadius: 999, background: '#2e8b48', opacity: 0.4 + ratioP * 0.6 }} />
-        <span style={{ color: 'var(--ink-soft)' }}>
-          {p >= 0 ? '+' : ''}
-          {p.toFixed(1)}
-        </span>
-      </span>
-      <span style={{ color: 'var(--ink-faint)' }}>·</span>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-        <span style={{ width: 8, height: 8, borderRadius: 999, background: '#e85a4f', opacity: 0.4 + ratioE * 0.6 }} />
-        <span style={{ color: 'var(--ink-soft)' }}>
-          {e >= 0 ? '+' : ''}
-          {e.toFixed(1)}
-        </span>
-      </span>
-    </div>
+    />
   );
 }
