@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       provider: 'google',
       options: {
         redirectTo: window.location.origin,
-        scopes: 'openid email profile https://www.googleapis.com/auth/calendar.events.readonly',
+        scopes: 'openid email profile https://www.googleapis.com/auth/calendar.readonly',
         queryParams: { access_type: 'offline', prompt: 'consent' },
       },
     });
