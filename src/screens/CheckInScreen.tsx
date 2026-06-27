@@ -13,6 +13,7 @@ interface CheckInScreenProps {
 export function CheckInScreen({ entries, onAdd }: CheckInScreenProps) {
   const [selected, setSelected] = useState<{ x: number; y: number } | null>(null);
   const [word, setWord] = useState('');
+  const [note, setNote] = useState('');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -20,6 +21,7 @@ export function CheckInScreen({ entries, onAdd }: CheckInScreenProps) {
   const onSelect = (cell: { x: number; y: number }) => {
     setSelected(cell);
     setWord('');
+    setNote('');
     setSheetOpen(true);
     setTimeout(() => inputRef.current?.focus(), 350);
   };
@@ -32,6 +34,7 @@ export function CheckInScreen({ entries, onAdd }: CheckInScreenProps) {
       x: selected.x,
       y: selected.y,
       word: word.trim(),
+      note: note.trim(),
     };
     onAdd(entry);
     setSheetOpen(false);
@@ -39,6 +42,7 @@ export function CheckInScreen({ entries, onAdd }: CheckInScreenProps) {
     setTimeout(() => setSavedFlash(false), 1900);
     setSelected(null);
     setWord('');
+    setNote('');
   };
 
   const q = selected ? quadrant(selected.x, selected.y) : null;
@@ -236,6 +240,54 @@ export function CheckInScreen({ entries, onAdd }: CheckInScreenProps) {
                     border: 'none',
                     padding: '14px 12px',
                     fontSize: 18,
+                    fontWeight: 500,
+                    color: 'var(--ink)',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  color: 'var(--ink-mute)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                }}
+              >
+                ¿Qué crees que lo provocó?
+                <span style={{ textTransform: 'none', fontWeight: 600, letterSpacing: 'normal', color: 'var(--ink-faint)', fontSize: 11 }}>
+                  · opcional
+                </span>
+              </label>
+              <div
+                style={{
+                  marginTop: 8,
+                  background: 'var(--bg)',
+                  borderRadius: 16,
+                  boxShadow: 'var(--neu-in)',
+                  padding: '4px 8px',
+                }}
+              >
+                <input
+                  value={note}
+                  onChange={(e) => setNote(e.target.value.slice(0, 120))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') onSave();
+                  }}
+                  placeholder="una frase corta…"
+                  style={{
+                    width: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '12px',
+                    fontSize: 15,
                     fontWeight: 500,
                     color: 'var(--ink)',
                   }}

@@ -16,6 +16,9 @@ export interface Entry {
   x: number;
   y: number;
   word: string;
+  // Optional short free-text on what the user thinks triggered the mood
+  // ("¿Qué crees que lo provocó?"). Empty string when not provided.
+  note: string;
 }
 
 export interface CalendarEvent {
@@ -142,7 +145,7 @@ async function currentUserId(): Promise<string> {
 export async function loadEntries(): Promise<Entry[]> {
   const { data, error } = await supabase
     .from('mood_entries')
-    .select('id,t,x,y,word')
+    .select('id,t,x,y,word,note')
     .order('t', { ascending: true });
   if (error) throw error;
   return (data ?? []).map((r) => ({
@@ -151,6 +154,7 @@ export async function loadEntries(): Promise<Entry[]> {
     x: r.x as number,
     y: r.y as number,
     word: (r.word as string | null) ?? '',
+    note: (r.note as string | null) ?? '',
   }));
 }
 
@@ -162,6 +166,7 @@ export async function addEntry(entry: Entry): Promise<Entry[]> {
     x: entry.x,
     y: entry.y,
     word: entry.word,
+    note: entry.note || null,
   });
   if (error) throw error;
   return loadEntries();

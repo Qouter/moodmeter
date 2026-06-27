@@ -88,6 +88,21 @@ export function HistoryScreen({ entries, onDelete }: HistoryScreenProps) {
                     <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--ink)' }}>
                       {e.word || '—'}
                     </div>
+                    {e.note && (
+                      <div
+                        style={{
+                          fontSize: 12.5,
+                          color: 'var(--ink-mute)',
+                          marginTop: 2,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                        title={e.note}
+                      >
+                        {e.note}
+                      </div>
+                    )}
                   </div>
                   <div className="mono" style={{ fontSize: 12, color: 'var(--ink-mute)', textAlign: 'right' }}>
                     {formatTime(new Date(e.t))}
