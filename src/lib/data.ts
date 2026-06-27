@@ -42,38 +42,43 @@ export const MOOD_LABELS: string[][] = [
   ['Hundido', 'Sin esperanza', 'Desolado', 'Vacío', 'Drenado', 'Quieto', 'Acogido', 'Adormilado', 'Completo', 'Sereno'],
 ];
 
-// Smooth bilinear interpolation across the four corner colors.
-// Top-left = red (high-unpleasant), top-right = yellow (high-pleasant),
-// bottom-right = green (low-pleasant), bottom-left = blue (low-unpleasant).
-// Cells near the center are pulled toward a pale tone so the middle of the
-// grid isn't a muddy brown.
+// Cell color per quadrant with intensity ramp.
+// Each quadrant ramps from its own pale center to its own saturated corner
+// (red/yellow/green/blue) based on distance from the grid center (4.5, 4.5),
+// with a hard split at x=5 / y=5 so the four quadrants stay visually distinct.
 export function cellColor(x: number, y: number): string {
-  const TL: [number, number, number] = [184, 54, 44];
-  const TR: [number, number, number] = [217, 168, 20];
-  const BR: [number, number, number] = [46, 139, 72];
-  const BL: [number, number, number] = [42, 77, 142];
-  const PALE: [number, number, number] = [245, 244, 240];
+  const right = x >= 5;
+  const top = y >= 5;
+  const dx = x - 4.5;
+  const dy = y - 4.5;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const maxDist = Math.sqrt(2 * 4.5 * 4.5);
+  const t = dist / maxDist;
 
-  const u = x / 9;
-  const v = y / 9;
-  const w_bl = (1 - u) * (1 - v);
-  const w_br = u * (1 - v);
-  const w_tl = (1 - u) * v;
-  const w_tr = u * v;
+  const corner: [number, number, number] = top && !right
+    ? [184, 54, 44]
+    : top && right
+      ? [217, 168, 20]
+      : !top && right
+        ? [46, 139, 72]
+        : [42, 77, 142];
 
-  const r = w_bl * BL[0] + w_br * BR[0] + w_tl * TL[0] + w_tr * TR[0];
-  const g = w_bl * BL[1] + w_br * BR[1] + w_tl * TL[1] + w_tr * TR[1];
-  const b = w_bl * BL[2] + w_br * BR[2] + w_tl * TL[2] + w_tr * TR[2];
+  const center: [number, number, number] = top && !right
+    ? [244, 175, 167]
+    : top && right
+      ? [249, 232, 175]
+      : !top && right
+        ? [180, 224, 192]
+        : [180, 198, 230];
 
-  const dx = (x - 4.5) / 4.5;
-  const dy = (y - 4.5) / 4.5;
-  const distNorm = Math.min(1, Math.sqrt(dx * dx + dy * dy));
-  const palePull = 0.45 * (1 - distNorm);
-
-  const fr = Math.round(r + (PALE[0] - r) * palePull);
-  const fg = Math.round(g + (PALE[1] - g) * palePull);
-  const fb = Math.round(b + (PALE[2] - b) * palePull);
-  return `rgb(${fr},${fg},${fb})`;
+  const mix = (a: number, b: number, k: number) => Math.round(a + (b - a) * k);
+  const k = Math.min(1, t * 1.05);
+  const out = [
+    mix(center[0], corner[0], k),
+    mix(center[1], corner[1], k),
+    mix(center[2], corner[2], k),
+  ];
+  return `rgb(${out[0]},${out[1]},${out[2]})`;
 }
 
 export function quadrant(x: number, y: number): Quadrant {
