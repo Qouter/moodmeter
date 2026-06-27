@@ -64,8 +64,6 @@ export default function App() {
     let cancelled = false;
     (async () => {
       try {
-        await seedIfEmpty();
-        if (cancelled) return;
         const fresh = await loadEntries();
         if (cancelled) return;
         setEntries(fresh);
